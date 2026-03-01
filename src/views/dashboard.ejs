@@ -1,0 +1,45 @@
+<%- include('header') %>
+<h1>📊 Dashboard</h1>
+
+<div class="dashboard">
+
+    <div class="card products">
+        <h2>📦 Total de Produtos</h2>
+        <p><%= totalProducts %></p>
+    </div>
+
+    <div class="card sales">
+        <h2>🛒 Total de Vendas</h2>
+        <p><%= totalSales %></p>
+    </div>
+
+    <div class="card revenue">
+        <h2>💰 Faturamento Total</h2>
+        <p><%= formatCurrency(totalRevenue) %></p>
+    </div>
+
+    <div class="card profit">
+        <h2>📈 Lucro Total</h2>
+        <p><%= formatCurrency(totalProfit) %></p>
+    </div>
+
+</div>
+
+<div class="low-stock">
+    <h2>⚠ Produtos com Estoque Baixo</h2>
+
+    <% if (lowStockProducts.length === 0) { %>
+        <p>✅ Nenhum produto com estoque baixo.</p>
+    <% } else { %>
+        <ul>
+            <% lowStockProducts.forEach(product => { %>
+                <li>
+                    <span class="alert"><%= product.name %></span>
+                    — Estoque: <%= product.stock %>
+                </li>
+            <% }) %>
+        </ul>
+    <% } %>
+</div>
+
+<%- include('footer') %>

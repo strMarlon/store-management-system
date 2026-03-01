@@ -1,0 +1,138 @@
+<%- include('header') %>
+<h1><i class='bx bxs-report'></i> Relatório de Vendas</h1>
+
+<!-- Date Filter Form -->
+<h2>Filtrar</h2>
+<form action="/sales/report" method="GET" class="date-filter-form">
+    <div>
+        <label for="date_from">De:</label>
+        <input type="date" id="date_from" name="date_from" value="<%= typeof date_from !== 'undefined' ? date_from : '' %>">
+    </div>
+    <div>
+        <label for="date_to">Até:</label>
+        <input type="date" id="date_to" name="date_to" value="<%= typeof date_to !== 'undefined' ? date_to : '' %>">
+    </div>
+    <button type="submit" class="btn-primary">Filtrar</button>
+    <a href="/sales/report" class="btn btn-secondary" style="text-decoration: none;">Limpar</a>
+</form>
+
+<!-- Summary Cards -->
+<div class="dashboard">
+    <div class="card revenue">
+        <div class="card-header">
+            <i class='bx bx-dollar-circle'></i>
+            <h2>Faturamento Total</h2>
+        </div>
+        <p><%= formatCurrency(totalRevenue) %></p>
+    </div>
+    <div class="card profit">
+        <div class="card-header">
+            <i class='bx bx-trending-up'></i>
+            <h2>Lucro Total</h2>
+        </div>
+        <p><%= formatCurrency(totalProfit) %></p>
+    </div>
+    <div class="card sales">
+        <div class="card-header">
+            <i class='bx bx-cart-alt'></i>
+            <h2>Total de Vendas</h2>
+        </div>
+        <p><%= totalSales %></p>
+    </div>
+    <div class="card products"> <!-- using products style for purple color -->
+        <div class="card-header">
+            <i class='bx bx-receipt'></i>
+            <h2>Ticket Médio</h2>
+        </div>
+        <p><%= formatCurrency(averageTicket) %></p>
+    </div>
+</div>
+
+<!-- Sales Table -->
+<h2>Detalhes das Vendas</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Data</th>
+            <th>Itens Vendidos</th>
+            <th>Total</th>
+            <th>Lucro</th>
+        </tr>
+    </thead>
+    <tbody>
+        <% if (sales.length === 0) { %>
+            <tr>
+                <td colspan="4" style="text-align: center;">Nenhuma venda registrada ainda.</td>
+            </tr>
+        <% } else { %>
+            <% sales.forEach(sale => { %>
+                <tr>
+                    <td><%= new Date(sale.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '') %></td>
+                    <td>
+                        <ul class="report-item-list">
+                            <% sale.items.slice(0, 2).forEach(item => { %>
+                                <li><%= item.quantity %>x <%= item.name %></li>
+                            <% }) %>
+                            <% if (sale.items.length > 2) { %>
+                                <div id="more-items-<%= sale.id %>" style="display: none;">
+                                    <% sale.items.slice(2).forEach(item => { %>
+                                        <li><%= item.quantity %>x <%= item.name %></li>
+                                    <% }) %>
+                                </div>
+                                <a href="javascript:void(0)" onclick="toggleReportItems('<%= sale.id %>', this, <%= sale.items.length - 2 %>)" style="font-size: 0.85em; color: var(--primary-color); text-decoration: none; font-weight: 500; display: block; margin-top: 4px;">
+                                    Ver mais (+<%= sale.items.length - 2 %>)
+                                </a>
+                            <% } %>
+                        </ul>
+                    </td>
+                    <td><strong><%= formatCurrency(sale.total) %></strong></td>
+                    <td style="color: var(--success-color); font-weight: 500;"><%= formatCurrency(sale.profit) %></td>
+                </tr>
+            <% }) %>
+        <% } %>
+    </tbody>
+</table>
+
+<!-- Pagination -->
+<div class="pagination">
+    <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+        <% 
+           let startPage = Math.max(1, currentPage - 2);
+           let endPage = Math.min(totalPages, startPage + 4);
+           
+           if (endPage - startPage < 4) {
+               startPage = Math.max(1, endPage - 4);
+           }
+        %>
+
+    <% if (currentPage > 1) { %>
+        <a href="/sales/report?page=<%= currentPage - 1 %>&date_from=<%= typeof date_from !== 'undefined' ? date_from : '' %>&date_to=<%= typeof date_to !== 'undefined' ? date_to : '' %>">&laquo;</a>
+    <% } %>
+
+    <% for(let i = startPage; i <= endPage; i++) { %>
+        <a href="/sales/report?page=<%= i %>&date_from=<%= typeof date_from !== 'undefined' ? date_from : '' %>&date_to=<%= typeof date_to !== 'undefined' ? date_to : '' %>" 
+           class="<%= currentPage === i ? 'active' : '' %>">
+           <%= i %>
+        </a>
+    <% } %>
+
+    <% if (currentPage < totalPages) { %>
+        <a href="/sales/report?page=<%= currentPage + 1 %>&date_from=<%= typeof date_from !== 'undefined' ? date_from : '' %>&date_to=<%= typeof date_to !== 'undefined' ? date_to : '' %>">&raquo;</a>
+    <% } %>
+    <% } %>
+</div>
+
+<script>
+function toggleReportItems(id, btn, count) {
+    const el = document.getElementById('more-items-' + id);
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+        btn.innerText = 'Ver menos';
+    } else {
+        el.style.display = 'none';
+        btn.innerText = 'Ver mais (+' + count + ')';
+    }
+}
+</script>
+
+<%- include('footer') %>

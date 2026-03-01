@@ -1,0 +1,189 @@
+<%- include('header') %>
+<div class="page-header">
+    <h1><i class='bx bx-package'></i> Produtos</h1>
+    <button class="btn-primary" onclick="openCreatePanel()">
+        <i class='bx bx-plus'></i> Novo Produto
+    </button>
+</div>
+
+<div class="card">
+    <div class="table-header">
+        <h2 style="margin: 0; font-size: 1.2rem;">Listagem de Produtos</h2>
+        <form action="/products" method="GET" style="box-shadow: none; padding: 0; margin: 0; background: transparent; display: flex; gap: 10px;">
+            <input type="text" name="search" placeholder="Buscar..." value="<%= typeof search !== 'undefined' ? search : '' %>" style="margin-bottom: 0; width: 250px;">
+            <button type="submit" class="btn-secondary"><i class='bx bx-search'></i></button>
+            <% if (typeof search !== 'undefined' && search) { %>
+                <a href="/products" class="btn btn-secondary" style="display: flex; align-items: center;"><i class='bx bx-x'></i></a>
+            <% } %>
+        </form>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Custo</th>
+          <th>Preço</th>
+          <th>Estoque</th>
+          <th>Margem</th>
+          <th style="text-align: right;">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (products.length === 0) { %>
+            <tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--text-secondary);">Nenhum produto encontrado.</td></tr>
+        <% } %>
+        <% products.forEach(product => { 
+             let margin = 0;
+             if(product.cost > 0) {
+                margin = (((product.price - product.cost) / product.cost) * 100).toFixed(2);
+             }
+        %>
+          <tr>
+            <td>
+                <div style="font-weight: 500;"><%= product.name %></div>
+            </td>
+            <td><%= formatCurrency(product.cost) %></td>
+            <td><%= formatCurrency(product.price) %></td>
+            <td>
+                <% if(product.stock <= 5) { %>
+                    <span style="color: var(--danger-color); font-weight: bold;"><%= product.stock %> (Baixo)</span>
+                <% } else { %>
+                    <%= product.stock %>
+                <% } %>
+            </td>
+            <td>
+                <% if(margin < 20) { %>
+                    <span style="color: var(--warning-color);"><%= margin %>%</span>
+                <% } else { %>
+                    <span style="color: var(--success-color);"><%= margin %>%</span>
+                <% } %>
+            </td>
+            <td style="width: 50px;">
+              <div class="action-menu">
+                <button class="action-btn" onclick="toggleMenu(this)">
+                  <i class='bx bx-dots-vertical-rounded'></i>
+                </button>
+                <div class="action-dropdown">
+                  <button onclick='openEditPanel(<%= JSON.stringify(product) %>)'><i class='bx bx-edit'></i> Editar</button>
+                  <form action="/products/delete/<%= product.id %>" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este produto?')">
+                    <button type="submit" class="text-danger"><i class='bx bx-trash'></i> Excluir</button>
+                  </form>
+                </div>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+
+    <!-- Paginação -->
+    <div class="pagination">
+        <% if (typeof totalPages !== 'undefined' && totalPages > 1) { %>
+            <% 
+               let startPage = Math.max(1, currentPage - 2);
+               let endPage = Math.min(totalPages, startPage + 4);
+               
+               if (endPage - startPage < 4) {
+                   startPage = Math.max(1, endPage - 4);
+               }
+            %>
+
+            <% if (currentPage > 1) { %>
+                <a href="/products?page=<%= currentPage - 1 %>&search=<%= typeof search !== 'undefined' ? search : '' %>">&laquo;</a>
+            <% } %>
+
+            <% for(let i = startPage; i <= endPage; i++) { %>
+                <a href="/products?page=<%= i %>&search=<%= typeof search !== 'undefined' ? search : '' %>" 
+                   class="<%= currentPage === i ? 'active' : '' %>">
+                   <%= i %>
+                </a>
+            <% } %>
+
+            <% if (currentPage < totalPages) { %>
+                <a href="/products?page=<%= currentPage + 1 %>&search=<%= typeof search !== 'undefined' ? search : '' %>">&raquo;</a>
+            <% } %>
+        <% } %>
+    </div>
+</div>
+
+<!-- Painel Lateral (Unificado Criar/Editar) -->
+<div id="productPanel" class="edit-panel">
+  <div class="edit-content">
+    <a href="javascript:void(0)" class="edit-panel-close" onclick="closePanel()">&times;</a>
+    <h2 id="panelTitle">Novo Produto</h2>
+    <form id="productForm" method="POST" action="/products/create">
+      
+      <label for="prodName">Nome do Produto</label>
+      <input type="text" name="name" id="prodName" required placeholder="Ex: Alto Falante 12pol">
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+          <div>
+              <label for="prodCost">Custo (R$)</label>
+              <input type="number" step="0.01" name="cost" id="prodCost" required placeholder="0,00">
+          </div>
+          <div>
+              <label for="prodPrice">Venda (R$)</label>
+              <input type="number" step="0.01" name="price" id="prodPrice" required placeholder="0,00">
+          </div>
+      </div>
+
+      <label for="prodStock">Estoque Inicial</label>
+      <input type="number" name="stock" id="prodStock" required placeholder="0">
+
+      <div style="margin-top: 20px; display: flex; gap: 10px;">
+          <button type="submit" class="btn-success" style="flex: 1;">Salvar</button>
+          <button type="button" onclick="closePanel()" class="btn-secondary" style="flex: 1;">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="pageOverlay" class="overlay" onclick="closePanel()"></div>
+
+<script>
+function openCreatePanel() {
+    document.getElementById("panelTitle").innerText = "Novo Produto";
+    document.getElementById("productForm").action = "/products/create";
+    document.getElementById("productForm").reset(); // Limpa o formulário
+    
+    document.getElementById("pageOverlay").classList.add("active");
+    document.getElementById("productPanel").classList.add("active");
+    document.getElementById("prodName").focus();
+}
+
+function openEditPanel(product) {
+    document.getElementById("panelTitle").innerText = "Editar Produto";
+    document.getElementById("productForm").action = "/products/update/" + product.id;
+    
+    document.getElementById("prodName").value = product.name;
+    document.getElementById("prodCost").value = product.cost;
+    document.getElementById("prodPrice").value = product.price;
+    document.getElementById("prodStock").value = product.stock;
+
+    document.getElementById("pageOverlay").classList.add("active");
+    document.getElementById("productPanel").classList.add("active");
+}
+
+function closePanel() {
+    document.getElementById("pageOverlay").classList.remove("active");
+    document.getElementById("productPanel").classList.remove("active");
+}
+
+function toggleMenu(btn) {
+    // Fecha outros menus abertos
+    document.querySelectorAll('.action-dropdown').forEach(d => {
+        if (d !== btn.nextElementSibling) d.classList.remove('active');
+    });
+    // Alterna o menu atual
+    btn.nextElementSibling.classList.toggle('active');
+}
+
+// Fecha o menu ao clicar fora
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('.action-menu')) {
+        document.querySelectorAll('.action-dropdown').forEach(d => d.classList.remove('active'));
+    }
+});
+</script>
+<%- include('footer') %>

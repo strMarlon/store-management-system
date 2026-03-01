@@ -1,0 +1,208 @@
+<%- include('header') %>
+
+<div class="pos-container">
+    
+    <!-- LADO ESQUERDO: CATÁLOGO -->
+    <div class="catalog-section">
+        <div class="search-bar">
+            <input type="text" id="catalogSearch" placeholder="🔍 Buscar produto por nome..." onkeyup="filterCatalog()">
+        </div>
+
+        <div class="product-grid" id="productGrid">
+            <% products.forEach(function(product, index) { %>
+                <% if (index === 14 && products.length > 14) { %>
+                    <div class="product-card" id="cardShowMore" onclick="showAllProducts()" 
+                         style="justify-content: center; align-items: center; background-color: var(--primary-color); cursor: pointer; border-color: var(--primary-color);">
+                        <div style="text-align: center; color: white;">
+                            <i class='bx bx-plus-circle' style="font-size: 48px; margin-bottom: 10px;"></i>
+                            <h3 style="color: white; font-size: 18px; margin: 0;">Mais Produtos...</h3>
+                            <span style="font-size: 12px; opacity: 0.9;">Ver +<%= products.length - 14 %> itens</span>
+                        </div>
+                    </div>
+                <% } %>
+
+                <div class="product-card <%= index >= 14 ? 'hidden-product' : '' %>" 
+                     style="<%= index >= 14 ? 'display: none;' : '' %>"
+                     onclick="selectProduct('<%= product.id %>', '<%= product.name %>', '<%= product.price %>', this)">
+                    <div>
+                        <h3><%= product.name %></h3>
+                        <div class="price"><%= formatCurrency(product.price) %></div>
+                    </div>
+                    <div class="stock">Estoque: <%= product.stock %></div>
+                </div>
+            <% }); %>
+        </div>
+    </div>
+
+    <!-- LADO DIREITO: CARRINHO E AÇÕES -->
+    <div class="cart-section">
+        <h2><i class='bx bx-cart'></i> Caixa</h2>
+
+        <!-- Formulário de Adição -->
+        <form action="/sales/add" method="POST" id="addForm" autocomplete="off" style="box-shadow: none; padding: 0; background: transparent;">
+            <input type="hidden" name="product_id" id="hiddenProductId" required>
+            
+            <div class="selected-product-display" id="selectedProductDisplay">
+                Selecione um produto ao lado
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label>Qtd</label>
+                    <input type="number" name="quantity" id="qtyInput" value="1" min="1" required>
+                </div>
+                <div style="flex: 1;">
+                    <label>Preço (R$)</label>
+                    <input type="number" step="0.01" name="custom_price" id="priceInput" placeholder="Padrão">
+                </div>
+            </div>
+
+            <button type="submit" id="addBtn" class="btn-primary" style="width: 100%;" disabled>
+                <i class='bx bx-plus'></i> Adicionar Item
+            </button>
+        </form>
+
+        <hr style="margin: 15px 0; border-color: var(--border-color);">
+
+        <!-- Lista do Carrinho -->
+        <div class="cart-items-container">
+            <table>
+                <% if (cart.length === 0) { %>
+                    <tr><td colspan="4" style="text-align: center; color: #999;">Carrinho vazio</td></tr>
+                <% } %>
+                <% cart.forEach((item, index) => { %>
+                    <tr>
+                        <td><%= item.quantity %>x</td>
+                        <td><%= item.name %></td>
+                        <td><%= formatCurrency(item.subtotal) %></td>
+                        <td style="text-align: right;">
+                            <a href="/sales/remove/<%= index %>" style="color: var(--danger-color);"><i class='bx bx-trash'></i></a>
+                        </td>
+                    </tr>
+                <% }) %>
+            </table>
+        </div>
+
+        <div class="total-display">
+            Total: <%= formatCurrency(total) %>
+        </div>
+
+        <form action="/sales/finalize" method="POST" style="padding: 0; box-shadow: none; background: transparent;">
+            <button class="btn-success" style="width: 100%; padding: 15px; font-size: 18px;">✅ Finalizar Venda</button>
+        </form>
+    </div>
+</div>
+
+<script>
+  // Função para mostrar os produtos ocultos
+  function showAllProducts() {
+      const btnMore = document.getElementById('cardShowMore');
+      if(btnMore) btnMore.style.display = 'none';
+
+      const hiddenProducts = document.querySelectorAll('.hidden-product');
+      hiddenProducts.forEach(el => {
+          el.style.display = "flex"; // O CSS para .product-card é display: flex
+          el.classList.remove('hidden-product');
+      });
+  }
+
+  // Função para selecionar produto ao clicar no card
+  function selectProduct(id, name, price, cardElement) {
+      // Atualiza inputs ocultos e visuais
+      document.getElementById('hiddenProductId').value = id;
+      document.getElementById('selectedProductDisplay').innerHTML = `Produto: <strong>${name}</strong>`;
+      document.getElementById('priceInput').placeholder = parseFloat(price).toFixed(2);
+      document.getElementById('priceInput').value = ''; // Reseta preço customizado
+      document.getElementById('qtyInput').value = 1;
+      
+      // Habilita botão
+      document.getElementById('addBtn').disabled = false;
+      document.getElementById('qtyInput').focus();
+
+      // Visual de seleção
+      document.querySelectorAll('.product-card').forEach(c => c.classList.remove('selected'));
+      cardElement.classList.add('selected');
+  }
+
+  // Filtro de pesquisa do catálogo
+  function filterCatalog() {
+      const input = document.getElementById('catalogSearch');
+      const filter = input.value.toLowerCase();
+      const grid = document.getElementById('productGrid');
+      const cards = grid.getElementsByClassName('product-card');
+      const btnMore = document.getElementById('cardShowMore');
+
+      // Gerencia a visibilidade do botão "Mais Produtos"
+      if (filter.length > 0) {
+          if (btnMore) btnMore.style.display = 'none';
+      } else {
+          if (btnMore && document.querySelectorAll('.hidden-product').length > 0) {
+              btnMore.style.display = 'flex';
+          }
+      }
+
+      for (let i = 0; i < cards.length; i++) {
+          // Ignora o próprio botão "Mais Produtos"
+          if (cards[i].id === 'cardShowMore') continue;
+
+          const name = cards[i].querySelector('h3').textContent.toLowerCase();
+          const isHiddenByPagination = cards[i].classList.contains('hidden-product');
+
+          // Lógica de visibilidade
+          if (name.indexOf(filter) > -1) {
+              // Se corresponde à busca, mostra (ignora a paginação)
+              cards[i].style.display = 'flex';
+          } else {
+              // Se não corresponde à busca
+              if (filter.length > 0) {
+                  // e a busca está ativa, esconde
+                  cards[i].style.display = 'none';
+              } else {
+                  // se não há busca, aplica a regra da paginação
+                  cards[i].style.display = isHiddenByPagination ? 'none' : 'flex';
+              }
+          }
+      }
+  }
+
+  // Intercepta o envio do formulário para AJAX
+  const addForm = document.getElementById('addForm');
+  addForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(addForm);
+    const data = new URLSearchParams();
+    for (const pair of formData) {
+      data.append(pair[0], pair[1]);
+    }
+    try {
+      const response = await fetch('/sales/add', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: data
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        if (result.error) {
+          alert(result.error);
+          return;
+        }
+      }
+      // Se sucesso, recarrega a página para atualizar o carrinho
+      window.location.reload();
+    } catch (err) {
+      alert('Erro ao adicionar ao carrinho.');
+    }
+  });
+</script>
+
+<% if (typeof success !== 'undefined' && success) { %>
+<script>
+    alert("✅ Venda realizada com sucesso!");
+    // Remove o parâmetro da URL para não mostrar o alerta novamente ao atualizar a página
+    if (window.history.replaceState) {
+        window.history.replaceState(null, null, window.location.pathname);
+    }
+</script>
+<% } %>
+
+<%- include('footer') %>
